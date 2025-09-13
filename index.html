@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>APLIKASI DIGITAL</title>
+
+  <!-- Tailwind + Chart.js (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root{
+      --bg1:#041225; --bg2:#071c33; --accent:#0ea5e9; --muted:#94a3b8;
+    }
+    html,body{height:100%}
+    body{
+      margin:0; padding:0;
+      background:linear-gradient(180deg,var(--bg1),var(--bg2));
+      color:#e6eef8; font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .glass{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter: blur(8px); border:1px solid rgba(255,255,255,0.03)}
+    .tiny{font-size:.78rem;color:var(--muted)}
+    .hidden{display:none}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;z-index:80}
+    .btn { padding:.5rem .75rem; border-radius:.5rem; cursor:pointer; }
+    .link { color:var(--accent); text-decoration:underline; cursor:pointer; }
+    @keyframes spin-slow {0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .animate-spin-slow{animation:spin-slow 6s linear infinite}
+    @media(min-width:768px){ #menu-toggle{display:none} }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="fixed inset-0 flex flex-col items-center justify-center z-50 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div class="relative">
+      <div class="absolute inset-0 rounded-full border-4 border-sky-500/40 animate-ping"></div>
+      <div class="w-24 h-24 rounded-full border-4 border-t-transparent border-sky-400 animate-spin-slow shadow-[0_0_30px_rgba(56,189,248,0.5)]"></div>
+      <div class="absolute inset-3 rounded-full bg-gradient-to-tr from-sky-500 via-cyan-400 to-blue-600 shadow-[0_0_40px_rgba(56,189,248,0.7)] animate-pulse"></div>
+    </div>
+    <div class="mt-8 text-center">
+      <h2 class="text-xl font-bold tracking-widest text-sky-400 animate-pulse">Memuat Aplikasi</h2>
+      <p id="loading-text" class="mt-2 text-slate-400 text-sm font-mono"></p>
+    </div>
+  </div>
+
+  <!-- Header (hidden until login) -->
+  <header id="main-header" class="hidden sticky top-0 z-40 glass p-3 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <img id="brand-logo" src="https://h.top4top.io/p_3543303f00.jpeg" alt="logo" class="w-12 h-12 rounded-full"/>
+      <div>
+        <h1 class="text-lg font-semibold">APLIKASI <span style="color:var(--accent)">XTANN</span></h1>
+        <div class="tiny">Versi 1.0</div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button id="music-btn" class="btn glass tiny">🎵</button>
+      <audio id="bg-music" src="https://h.top4top.io/m_3523x1wqr0.mp3" preload="none"></audio>
+      <span id="user-profile" class="hidden px-3 py-1 rounded bg-slate-700/30 tiny"></span>
+      <button id="menu-toggle" class="btn glass">☰</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+<nav id="sidebar" class="hidden fixed top-0 left-0 h-full w-64 bg-gray-900 text-white flex flex-col shadow-lg z-40">
+  <!-- Profile -->
+  <div class="p-6 flex flex-col items-center border-b border-gray-700">
+    <img src="https://h.top4top.io/p_3543303f00.jpg" alt="Profile" class="w-20 h-20 rounded-full border-2 border-white">
+    <h2 class="mt-3 text-lg font-semibold">XTANN OFFICIAL</h2>
+  </div>
+
+  <!-- Menu -->
+  <ul class="flex-1 p-4 space-y-2 text-sm">
+    <li><button id="menu-dashboard" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700/30">📊 Dashboard</button></li>
+      <li><button id="menu-topup" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700/30">💰 Top Up Game</button></li>
+      <li><button id="menu-pulsa" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700/30">📶 Pulsa & Data</button></li>
+      <li><button id="menu-downloader" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700/30">⬇️ Downloader</button></li>
+      <li><button id="menu-contact" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700/30">📩 Contact</button></li>
+      <li><button id="help-menu" class="w-full text-left px-3 py-2 rounded hover:bg-slate-700/30">❓ Tutorial</button></li>
+      <li><button id="logout-btn" class="w-full text-left px-3 py-2 rounded bg-red-600/80 hover:bg-red-700">Log Out</button></li>
+  </ul>
+</nav>
+
+  <!-- Auth -->
+  <section id="auth-section" class="min-h-[70vh] flex items-center justify-center p-6">
+    <div class="glass p-6 rounded-lg max-w-md w-full shadow-lg">
+      <h2 id="auth-title" class="text-2xl font-semibold text-center mb-4">Login</h2>
+      <form id="auth-form" class="space-y-4">
+        <div>
+          <label class="block text-sm mb-1 tiny">Username</label>
+          <input id="username" type="text" required class="w-full px-3 py-2 rounded bg-slate-900 border"/>
+        </div>
+        <div>
+          <label class="block text-sm mb-1 tiny">Password</label>
+          <input id="password" type="password" required class="w-full px-3 py-2 rounded bg-slate-900 border"/>
+        </div>
+        <div class="flex gap-2">
+          <button id="auth-submit-btn" type="submit" class="flex-1 bg-sky-600 py-2 rounded font-semibold">Login</button>
+          <button id="switch-to-register" type="button" class="flex-1 bg-slate-700 py-2 rounded">Daftar</button>
+        </div>
+      </form>
+      <p class="text-xs text-slate-400 mt-3">⚠️ Data disimpan di perangkat. Untuk production gunakan backend aman.</p>
+      <p class="tiny mt-2"><b></b> <i></i></p>
+    </div>
+  </section>
+
+  <!-- Welcome -->
+  <section id="welcome-section" class="hidden min-h-[18vh] flex items-center justify-center p-6">
+    <h2 id="welcome-message" class="text-3xl font-bold fadeInUp"></h2>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="dashboard-section" class="hidden p-6">
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="glass p-4 rounded-lg md:col-span-1">
+        <div class="text-center mb-4">
+          <img id="logo-large" src="https://h.top4top.io/p_3543303f00.jpeg" alt="Logo" class="mx-auto rounded-full mb-3 w-28 h-28"/>
+          <h3 class="text-xl font-bold">Project <span style="color:var(--accent)">FATXEON</span></h3>
+          <p class="tiny">Dashboard & Portofolio</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-3 rounded bg-slate-900"><div class="tiny">👤 Total Users</div><div id="stat-users" class="text-2xl font-semibold">0</div></div>
+          <div class="p-3 rounded bg-slate-900"><div class="tiny">💰 TopUp Hari Ini</div><div id="stat-topup" class="text-2xl font-semibold">0</div></div>
+          <div class="p-3 rounded bg-slate-900"><div class="tiny">🎮 Game</div><div id="stat-game" class="text-2xl font-semibold">0</div></div>
+          <div class="p-3 rounded bg-slate-900"><div class="tiny">⬇️ Downloads</div><div id="stat-dl" class="text-2xl font-semibold">0</div></div>
+        </div>
+        <div class="mt-4 space-y-2">
+          <button id="resetStats" class="w-full py-2 rounded bg-amber-600 tiny hover:bg-amber-500 transition">Reset Stats</button>
+          <button id="exportData" class="w-full py-2 rounded bg-green-600 tiny hover:bg-green-500 transition">Export JSON</button>
+        </div>
+      </div>
+
+      <div class="glass p-4 rounded-lg md:col-span-2">
+        <div class="flex justify-between items-center mb-3">
+          <h4 class="font-semibold">📊 Statistik Pengunjung Mingguan</h4>
+          <div class="tiny text-slate-400">Data tersimpan lokal</div>
+        </div>
+        <canvas id="visitorChart" height="140"></canvas>
+
+        <div class="mt-6 space-y-3">
+          <div>
+            <div class="tiny mb-1">Transaksi Hari Ini</div>
+            <div class="w-full bg-slate-800 rounded overflow-hidden h-4">
+              <div id="progress-today" class="h-4" style="width:25%;background:linear-gradient(90deg,var(--accent),#7dd3fc)"></div>
+            </div>
+          </div>
+          <div>
+            <div class="tiny mb-1">Ketersediaan Layanan</div>
+            <div class="w-full bg-slate-800 rounded overflow-hidden h-4">
+              <div id="progress-uptime" class="h-4" style="width:98%;background:linear-gradient(90deg,#34d399,var(--accent))"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main content pages -->
+  <main id="main-content" class="hidden p-6 space-y-6">
+    <!-- Topup -->
+    <section id="topup" class="hidden bg-slate-800/60 p-4 rounded-lg shadow">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-semibold">🕹️ Top Up Game</h3>
+        <div class="text-sm text-slate-300">Bayar via: <span id="pay-method-display">Pilih metode</span></div>
+      </div>
+      <div class="grid gap-3">
+        <input id="tu-id" type="text" placeholder="User ID Game" class="w-full p-2 rounded bg-slate-900 border"/>
+        <select id="tu-nom" class="w-full p-2 rounded bg-slate-900 border">
+          <option value="">Pilih Nominal</option>
+          <option value="10000">Rp10.000 - 50 Diamonds</option>
+          <option value="20000">Rp20.000 - 120 Diamonds</option>
+          <option value="50000">Rp50.000 - 350 Diamonds</option>
+        </select>
+        <div class="flex gap-1">
+          <button id="tu-pay-method" class="flex-1 bg-sky-600 py-2 rounded">Bayar pakai Metode</button>
+          <button id="tu-history" class="bg-slate-700 py-2 rounded px-4">Riwayat</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pulsa -->
+    <section id="pulsa" class="hidden bg-slate-800/60 p-4 rounded-lg shadow">
+      <div class="flex justify-between items-center mb-3"><h3 class="font-semibold">📶 Paket Data & Pulsa</h3></div>
+      <div class="grid gap-3">
+        <input id="pl-hp" type="text" placeholder="Nomor HP" class="w-full p-2 rounded bg-slate-900 border"/>
+        <select id="pl-pkt" class="w-full p-2 rounded bg-slate-900 border">
+          <option value="">Pilih Paket</option>
+          <option value="5000">Rp5.000</option>
+          <option value="10000">Rp10.000</option>
+          <option value="25000">Rp25.000</option>
+        </select>
+        <div class="flex gap-1">
+          <button id="pl-pay-method" class="flex-1 bg-sky-600 py-2 rounded">Bayar pakai Metode</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Downloader -->
+    <section id="downloader" class="hidden bg-slate-800/60 p-4 rounded-lg shadow">
+      <h3 class="font-semibold mb-3">⬇️ Downloader TikTok & Instagram</h3>
+      <input id="download-url" type="url" placeholder="Masukkan URL TikTok/Instagram" class="w-full p-2 rounded bg-slate-900 border mb-2"/>
+      <div class="flex gap-2">
+        <button id="download-btn" class="flex-1 bg-emerald-500 py-2 rounded">Download Video</button>
+        <button id="download-audio-btn" class="flex-1 bg-indigo-600 py-2 rounded">Download MP3</button>
+      </div>
+      <p id="download-note" class="text-xs text-slate-400 mt-2">Note: Layanan dibuka di tab baru untuk menghindari CORS.</p>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact" class="hidden bg-slate-800/60 p-4 rounded-lg shadow">
+      <h3 class="font-semibold mb-3">📩 Contact Developer</h3>
+      <a id="wa-link" class="block bg-green-600 text-center py-2 rounded mb-2" href="https://wa.me/6281234567890" target="_blank">WhatsApp</a>
+      <button id="open-tutorial" class="w-full bg-amber-600 py-2 rounded">Buka Tutorial Interaktif</button>
+    </section>
+  </main>
+
+  <!-- Payment Modal -->
+  <div id="payment-modal" class="hidden modal-backdrop">
+    <div class="glass rounded-lg w-full max-w-lg p-5">
+      <div class="flex justify-between items-start">
+        <h3 id="pm-title" class="font-semibold">Pembayaran</h3>
+        <button id="pm-close">✖</button>
+      </div>
+      <div id="pm-body" class="mt-4">
+        <div id="pm-placeholder" class="text-slate-400 tiny">Pilih metode lalu lihat instruksi pembayaran.</div>
+      </div>
+      <div class="mt-4 flex gap-2 justify-end">
+        <button id="pm-copy" class="px-3 py-2 rounded bg-slate-700 tiny" style="display:none">Salin Nomor</button>
+        <button id="pm-open" class="px-3 py-2 rounded bg-sky-600 tiny" style="display:none">Buka QR / Halaman</button>
+        <button id="pm-confirm" class="px-3 py-2 rounded bg-green-600 tiny" style="display:none">Confirm Paid</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tutorial Modal -->
+  <div id="tutorial-modal" class="hidden modal-backdrop">
+    <div class="glass rounded-lg max-w-2xl w-full p-5 shadow-lg">
+      <div class="flex justify-between items-start">
+        <h3 class="font-semibold text-lg">Panduan Penggunaan</h3>
+        <button id="t-close" class="text-slate-300">✖</button>
+      </div>
+      <div class="mt-3 grid md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+          <div id="t-step" class="bg-slate-800 p-4 rounded">
+            <h4 id="t-step-title" class="font-semibold mb-2"></h4>
+            <p id="t-step-desc" class="text-sm text-slate-300"></p>
+            <div class="mt-3">
+              <img id="t-step-img" src="" alt="contoh" class="w-full rounded border border-slate-700 shadow-sm"/>
+            </div>
+          </div>
+          <div class="flex justify-between items-center mt-4">
+            <button id="t-prev" class="px-3 py-2 rounded bg-slate-700">◀ Sebelumnya</button>
+            <div class="space-x-2">
+              <button id="t-skip" class="px-3 py-2 rounded bg-slate-600">Lewati</button>
+              <button id="t-next" class="px-4 py-2 rounded bg-sky-600">Selanjutnya ▶</button>
+            </div>
+          </div>
+        </div>
+        <aside class="md:col-span-1 bg-slate-800 p-3 rounded text-sm">
+          <h5 class="font-semibold mb-2">Langkah cepat</h5>
+          <ol id="t-steps-list" class="list-decimal list-inside space-y-2 text-slate-300"></ol>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed right-6 bottom-6 bg-slate-800 px-4 py-2 rounded shadow text-sm"></div>
+
+<script>
+/* =========================
+   Full app script (all features)
+   Author: assistant (merged & fixed)
+   ========================= */
+
+const el = id => document.getElementById(id);
+const APP_KEY = 'fx_app_v2_full';
+
+// Simple storage helpers
+function getAppData(){
+  return JSON.parse(localStorage.getItem(APP_KEY) || JSON.stringify({
+    users: {},
+    global: {visits:[0,0,0,0,0,0,0], totals:{topup:0,game:0,dl:0}},
+    settings: {theme:'dark'}
+  }));
+}
+function saveAppData(d){ localStorage.setItem(APP_KEY, JSON.stringify(d)); }
+
+function toast(msg, t=2200){
+  const box = el('toast'); if(!box) return;
+  box.textContent = msg; box.classList.remove('hidden');
+  setTimeout(()=> box.classList.add('hidden'), t);
+}
+
+// Hash (WebCrypto) used for storing demo password securely
+async function hashPassword(pass, salt=''){
+  const enc = new TextEncoder();
+  const data = enc.encode(pass + salt);
+  const hashBuf = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuf));
+  return hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// App state
+let app = getAppData();
+let currentUser = null;
+let visitorChart = null;
+let pmContext = null;
+
+// Seed demo user
+(async function seedDemo(){
+  app = getAppData();
+  if(Object.keys(app.users).length === 0){
+    const salt = 'demo-salt';
+    const h = await hashPassword('demo123', salt);
+    app.users['demo'] = {hash: h, salt, created: Date.now(), stats:{logins:[], topups:3, games:2, downloads:4}, profile:{display:'demo'}};
+    app.global.totals = {topup:3, game:2, dl:4};
+    saveAppData(app);
+  }
+})();
+
+// Loading typing effect (short)
+(function loadingTyping(){
+  const texts = ["𝗦𝗲𝗿𝘃𝗲𝗿 𝗖𝗼𝗻𝗻𝗲𝗰𝘁⚡...","Memuat dashboard 🚀..."];
+  let idx=0,char=0; const elL = el('loading-text'); if(!elL) return;
+  function step(){ if(char < texts[idx].length){ elL.textContent += texts[idx].charAt(char++); setTimeout(step,40);} else { setTimeout(()=>{ elL.textContent=''; char=0; idx=(idx+1)%texts.length; step();},800); }}
+  document.addEventListener('DOMContentLoaded', ()=> step());
+})();
+
+window.addEventListener('load', ()=>{
+  setTimeout(()=>{
+    el('loading-screen') && el('loading-screen').classList.add('hidden');
+    el('auth-section') && el('auth-section').classList.remove('hidden');
+  }, 700);
+});
+
+/* =========================
+   Auth: register & login (NO CAPTCHA)
+   ========================= */
+
+let isLogin = true;
+if(el('switch-to-register')){
+  el('switch-to-register').addEventListener('click', ()=>{
+    isLogin = !isLogin;
+    el('auth-title').textContent = isLogin ? 'Login' : 'Register';
+    el('auth-submit-btn').textContent = isLogin ? 'Login' : 'Daftar';
+  });
+}
+
+el('auth-form') && el('auth-form').addEventListener('submit', async (ev)=>{
+  ev.preventDefault();
+  const u = el('username').value.trim();
+  const p = el('password').value;
+  if(!u || !p) return toast('Lengkapi username & password');
+  app = getAppData();
+
+  if(!isLogin){
+    if(app.users[u]) return toast('Username sudah ada');
+    const salt = Array.from(crypto.getRandomValues(new Uint8Array(8))).join('');
+    const h = await hashPassword(p, salt);
+    app.users[u] = {hash:h, salt, created: Date.now(), stats:{logins:[], topups:0, games:0, downloads:0}, profile:{display:u}};
+    saveAppData(app);
+    toast('Registrasi berhasil — silakan login');
+    isLogin = true; el('auth-title').textContent='Login'; el('auth-submit-btn').textContent='Login';
+    return;
+  }
+
+  // Login flow
+  const user = app.users[u];
+  if(!user) return toast('User tidak ditemukan');
+  const h2 = await hashPassword(p, user.salt);
+  if(h2 !== user.hash) return toast('Password salah');
+
+  currentUser = u;
+  user.stats.logins = user.stats.logins || [];
+  user.stats.logins.push(Date.now());
+  // increment visits (Mon=0..Sun=6 mapping)
+  const dayIdx = (new Date()).getDay();
+  app.global.visits[(dayIdx + 6) % 7] = (app.global.visits[(dayIdx + 6) % 7] || 0) + 1;
+  saveAppData(app);
+  proceedToApp(u);
+});
+
+/* =========================
+   Proceed to app UI
+   ========================= */
+function proceedToApp(user){
+  el('auth-section') && el('auth-section').classList.add('hidden');
+  el('welcome-section') && el('welcome-section').classList.remove('hidden');
+  el('welcome-message') && (el('welcome-message').textContent = `Selamat datang, ${user}!`);
+  el('user-profile') && (el('user-profile').textContent = user, el('user-profile').classList.remove('hidden'));
+
+  setTimeout(()=> {
+    el('welcome-section') && el('welcome-section').classList.add('hidden');
+    initDashboard();
+    el('dashboard-section') && el('dashboard-section').classList.remove('hidden');
+    el('main-header') && el('main-header').classList.remove('hidden');
+    el('sidebar') && el('sidebar').classList.remove('hidden');
+    el('main-content') && el('main-content').classList.remove('hidden');
+    showMainSection('topup');
+    updateSummaryWidgets();
+  }, 900);
+}
+
+/* =========================
+   Dashboard + Chart
+   ========================= */
+function initDashboard(){
+  app = getAppData();
+  const ctx = el('visitorChart');
+  if(!ctx) return;
+  if(visitorChart) visitorChart.destroy();
+  visitorChart = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels:['Sen','Sel','Rab','Kam','Jum','Sab','Min'],
+      datasets:[{
+        label:'Pengunjung',
+        data: app.global.visits,
+        fill:true,
+        borderColor: 'rgba(14,165,233,1)',
+        backgroundColor:'rgba(14,165,233,0.12)',
+        tension:0.3,
+        pointBackgroundColor:'#0ea5e9'
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{color:'#fff'}}},
+      scales:{
+        x:{ticks:{color:'#cbd5e1'},grid:{color:'rgba(255,255,255,0.03)'}},
+        y:{ticks:{color:'#cbd5e1'},grid:{color:'rgba(255,255,255,0.03)'}}
+      }
+    }
+  });
+  updateSummaryWidgets();
+}
+
+function updateSummaryWidgets(){
+  app = getAppData();
+  el('stat-users') && (el('stat-users').textContent = Object.keys(app.users).length);
+  el('stat-topup') && (el('stat-topup').textContent = app.global.totals.topup || 0);
+  el('stat-game') && (el('stat-game').textContent = app.global.totals.game || 0);
+  el('stat-dl') && (el('stat-dl').textContent = app.global.totals.dl || 0);
+  const todayTx = Math.min(100, (app.global.totals.topup % 100) + 10);
+  el('progress-today') && (el('progress-today').style.width = `${todayTx}%`);
+}
+
+/* =========================
+   Sidebar & navigation wiring
+   ========================= */
+if (el('menu-toggle')) el('menu-toggle').addEventListener('click', ()=> el('sidebar').classList.toggle('hidden'));
+if (el('close-menu')) el('close-menu').addEventListener('click', ()=> el('sidebar').classList.add('hidden'));
+if (el('help-menu')) el('help-menu').addEventListener('click', openTutorial);
+if (el('open-tutorial')) el('open-tutorial').addEventListener('click', openTutorial);
+
+['menu-dashboard','menu-topup','menu-pulsa','menu-downloader','menu-contact'].forEach(id=>{
+  if(el(id)) el(id).addEventListener('click', ()=>{
+    const map = { 'menu-dashboard':'dashboard-section', 'menu-topup':'topup', 'menu-pulsa':'pulsa', 'menu-downloader':'downloader', 'menu-contact':'contact' };
+    const target = map[id];
+    if(target) showMainSection(target);
+    el('sidebar') && el('sidebar').classList.add('hidden');
+  });
+});
+
+if (el('logout-btn')) el('logout-btn').addEventListener('click', ()=>{
+  currentUser = null;
+  el('main-header') && el('main-header').classList.add('hidden');
+  el('sidebar') && el('sidebar').classList.add('hidden');
+  showMainSection('auth-section');
+  toast('Logout berhasil');
+});
+
+/* Helper: show main-content sections */
+function showMainSection(id){
+  // hide dashboard & all #main-content > sections
+  document.querySelectorAll('#main-content > section').forEach(s=> s.classList.add('hidden'));
+  if(id !== 'dashboard-section') el('dashboard-section') && el('dashboard-section').classList.add('hidden');
+  const target = el(id);
+  if(target) target.classList.remove('hidden');
+}
+
+/* =========================
+   Payment & orders
+   ========================= */
+const payProviders = {
+  gopay: {name:'GoPay', number:'0895400761889'},
+  ovo: {name:'OVO', number:'0895400761889'},
+  dana: {name:'DANA', number:'0895400761889'},
+  qris: {name:'QRIS', qris:'https://i.top4top.io/p_3543gau000.jpg/280x280?text=QRIS+QR'}
+};
+
+// Open payment modal flow (pick method if not selected)
+function openPaymentModal(context){
+  pmContext = context || {};
+  const copyBtn = el('pm-copy'), openBtn = el('pm-open'), confirmBtn = el('pm-confirm'), body = el('pm-body');
+
+  // choose provider
+  if(pmContext.flow === 'order' && !pmContext.method){
+    el('pm-title').textContent = 'Pilih Metode Pembayaran';
+    body.innerHTML = `
+      <div class="grid gap-2">
+        <p class="tiny">Pilih metode untuk membayar pesanan:</p>
+        <div class="grid grid-cols-2 gap-2 mt-2">
+          <button id="choice-gopay" class="py-2 rounded bg-indigo-600">GoPay</button>
+          <button id="choice-ovo" class="py-2 rounded bg-purple-600">OVO</button>
+          <button id="choice-dana" class="py-2 rounded bg-emerald-600">DANA</button>
+          <button id="choice-qris" class="py-2 rounded bg-sky-600">QRIS</button>
+        </div>
+      </div>`;
+    copyBtn.style.display=openBtn.style.display=confirmBtn.style.display='none';
+    el('payment-modal').classList.remove('hidden');
+    // attach after render
+    setTimeout(()=>{
+      el('choice-gopay') && (el('choice-gopay').onclick = ()=> { pmContext.method='gopay'; openPaymentModal(pmContext); });
+      el('choice-ovo') && (el('choice-ovo').onclick  = ()=> { pmContext.method='ovo'; openPaymentModal(pmContext); });
+      el('choice-dana') && (el('choice-dana').onclick = ()=> { pmContext.method='dana'; openPaymentModal(pmContext); });
+      el('choice-qris') && (el('choice-qris').onclick = ()=> { pmContext.method='qris'; openPaymentModal(pmContext); });
+    }, 80);
+    return;
+  }
+
+  // show provider details
+  const method = pmContext.method || 'qris';
+  const prov = payProviders[method] || payProviders.qris;
+  el('pm-title').textContent = `Bayar ${pmContext.orderType || ''} via ${prov.name}`;
+  body.innerHTML = `
+    <div class="grid gap-2">
+      <p class="tiny">Nomor / ID: <b id="pm-num">${prov.number}</b></p>
+      <img id="pm-qr" src="${prov.qris}" alt="QR" class="w-48 h-48 object-cover rounded border mt-2"/>
+      <p id="pm-note" class="tiny mt-2">Buka aplikasi pembayaran, scan QR atau transfer ke nomor di atas. Setelah transfer klik <b>Confirm Paid</b>.</p>
+    </div>`;
+  copyBtn.style.display=openBtn.style.display=confirmBtn.style.display='inline-block';
+  copyBtn.onclick = ()=> navigator.clipboard.writeText(prov.number).then(()=> toast('Nomor disalin')).catch(()=> toast('Gagal salin'));
+  openBtn.onclick = ()=> window.open(prov.qris || 'https://example.com', '_blank');
+  confirmBtn.onclick = pmConfirm;
+  el('payment-modal').classList.remove('hidden');
+}
+el('pm-close') && el('pm-close').addEventListener('click', ()=> el('payment-modal').classList.add('hidden'));
+
+function pmConfirm(){
+  if(!pmContext) return;
+  if(pmContext.flow === 'order'){
+    app = getAppData();
+    const user = currentUser || 'Guest';
+    const method = pmContext.method || 'qris';
+    const order = {user, method, orderType:pmContext.orderType, details:pmContext.details, time:Date.now()};
+    // save per-user orders
+    const key = `orders_${user}`;
+    const arr = JSON.parse(localStorage.getItem(key) || '[]');
+    arr.unshift(order);
+    localStorage.setItem(key, JSON.stringify(arr.slice(0,200)));
+    // update global counters & per-user stats safely
+    if(!app.global.totals) app.global.totals = {topup:0,game:0,dl:0};
+    if(order.orderType === 'TopUp'){ app.global.totals.topup = (app.global.totals.topup||0)+1; if(app.users[user]) app.users[user].stats.topups = (app.users[user].stats.topups||0)+1; }
+    if(order.orderType === 'Pulsa'){ app.global.totals.topup = (app.global.totals.topup||0)+1; }
+    saveAppData(app);
+    el('payment-modal').classList.add('hidden');
+    toast('Pembayaran dikonfirmasi. Pesanan tersimpan (demo).');
+    updateSummaryWidgets();
+  }
+  pmContext = null;
+}
+
+/* =========================
+   Downloader (open external)
+   ========================= */
+const tiktokApi = u => `https://api.akuari.my.id/downloader/tiktok?link=${encodeURIComponent(u)}`;
+const tiktokAudioApi = u => `https://api.akuari.my.id/downloader/tiktok/audio?link=${encodeURIComponent(u)}`;
+const igApi = u => `https://api.akuari.my.id/downloader/instagram?link=${encodeURIComponent(u)}`;
+
+el('download-btn') && el('download-btn').addEventListener('click', ()=>{
+  const url = el('download-url').value.trim(); if(!url) return toast('Masukkan URL');
+  app = getAppData(); app.global.totals.dl = (app.global.totals.dl||0)+1; saveAppData(app); updateSummaryWidgets();
+  window.open(tiktokApi(url), '_blank'); toast('Membuka layanan download di tab baru');
+});
+el('download-audio-btn') && el('download-audio-btn').addEventListener('click', ()=>{
+  const url = el('download-url').value.trim(); if(!url) return toast('Masukkan URL');
+  app = getAppData(); app.global.totals.dl = (app.global.totals.dl||0)+1; saveAppData(app); updateSummaryWidgets();
+  window.open(tiktokAudioApi(url), '_blank'); toast('Membuka layanan download audio');
+});
+
+/* =========================
+   TopUp & Pulsa flows
+   ========================= */
+el('tu-pay-method') && el('tu-pay-method').addEventListener('click', ()=>{
+  const id = el('tu-id').value.trim();
+  const nom = el('tu-nom').value;
+  if(!id || !nom) return toast('Lengkapi data TopUp');
+  openPaymentModal({flow:'order', orderType:'TopUp', details:{id, nom}});
+});
+el('pl-pay-method') && el('pl-pay-method').addEventListener('click', ()=>{
+  const hp = el('pl-hp').value.trim(); const pkt = el('pl-pkt').value;
+  if(!hp || !pkt) return toast('Lengkapi data Pulsa');
+  openPaymentModal({flow:'order', orderType:'Pulsa', details:{hp, pkt}});
+});
+el('tu-history') && el('tu-history').addEventListener('click', ()=>{
+  const arr = JSON.parse(localStorage.getItem(`orders_${currentUser}`) || '[]');
+  if(!arr.length) return toast('Belum ada riwayat');
+  let text = 'Riwayat Terbaru:\n';
+  arr.slice(0,10).forEach(it=>{
+    text += `- ${it.orderType} ${JSON.stringify(it.details)} [${new Date(it.time).toLocaleString()}]\n`;
+  });
+  alert(text);
+});
+
+/* =========================
+   Export / Reset
+   ========================= */
+el('export-btn') && el('export-btn').addEventListener('click', ()=> {
+  const d = getAppData();
+  const csv = buildCSV(d);
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='fx_data.csv'; a.click(); URL.revokeObjectURL(url);
+  toast('CSV diunduh (demo)');
+});
+el('exportData') && el('exportData').addEventListener('click', ()=> {
+  const d = getAppData();
+  const blob = new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='fx_data.json'; a.click();
+  toast('JSON diunduh');
+});
+function buildCSV(data){
+  let out = 'type,key,value\n';
+  out += `global,visits,"${data.global.visits.join('|')}"\n`;
+  out += `global,topup,${data.global.totals.topup||0}\n`;
+  Object.keys(data.users).forEach(u=>{
+    const usr = data.users[u];
+    out += `user,${u},created:${new Date(usr.created).toLocaleString()}|topups:${usr.stats.topups||0}|logins:${(usr.stats.logins||[]).length}\n`;
+  });
+  return out;
+}
+el('resetStats') && el('resetStats').addEventListener('click', ()=> {
+  if(!confirm('Reset semua statistik global?')) return;
+  app = getAppData();
+  app.global = {visits:[0,0,0,0,0,0,0], totals:{topup:0,game:0,dl:0}};
+  saveAppData(app); initDashboard(); toast('Stats direset');
+});
+
+/* =========================
+   Music control
+   ========================= */
+el('music-btn') && el('music-btn').addEventListener('click', ()=>{
+  const m = el('bg-music');
+  if(!m) return;
+  if(m.paused){ m.play().catch(()=>{}); el('music-btn').textContent='⏸️'; }
+  else { m.pause(); el('music-btn').textContent='🎵'; }
+});
+
+/* =========================
+   Tutorial interaktif
+   ========================= */
+const tutorialSteps = [
+  {title:'Selamat Datang', desc:'Selamat! Tutorial singkat untuk memakai aplikasi. Klik Selanjutnya.', img:'https://i.ibb.co/tPzrvdK/tutorial-topup.png'},
+  {title:'Top Up Game', desc:'Masukkan ID game, pilih nominal. Bayar menggunakan metode.', img:'https://i.ibb.co/fnnrYPY/tutorial-payment.png'},
+  {title:'Downloader', desc:'Paste link TikTok/IG lalu klik Download. Layanan dibuka di tab baru.', img:'https://i.ibb.co/0F6T0q7/tutorial-downloader.png'},
+  {title:'Pembayaran', desc:'Buka QR atau salin nomor. Setelah bayar klik Confirm Paid agar admin menerima notifikasi.', img:'https://i.ibb.co/fnnrYPY/tutorial-payment.png'},
+  {title:'Selesai', desc:'Selesai! Untuk production: tambahkan backend & integrasi gateway resmi.', img:'https://i.ibb.co/tPzrvdK/tutorial-topup.png'}
+];
+let tIndex = 0;
+function renderTutorial(){
+  const s = tutorialSteps[tIndex];
+  el('t-step-title') && (el('t-step-title').textContent = `${tIndex+1}. ${s.title}`);
+  el('t-step-desc') && (el('t-step-desc').textContent = s.desc);
+  el('t-step-img') && (el('t-step-img').src = s.img);
+  const list = el('t-steps-list'); if(list){ list.innerHTML=''; tutorialSteps.forEach((ss,i)=>{ const li = document.createElement('li'); li.textContent = `${i+1}. ${ss.title}`; li.className = (i===tIndex)?'font-semibold text-sky-400':'text-slate-300'; list.appendChild(li); }); }
+  el('t-prev') && (el('t-prev').disabled = (tIndex===0));
+  el('t-next') && (el('t-next').textContent = (tIndex===tutorialSteps.length-1)?'Selesai':'Selanjutnya ▶');
+}
+function openTutorial(){ tIndex=0; renderTutorial(); el('tutorial-modal') && el('tutorial-modal').classList.remove('hidden'); }
+el('t-close') && el('t-close').addEventListener('click', ()=> el('tutorial-modal').classList.add('hidden'));
+el('t-next') && el('t-next').addEventListener('click', ()=> { if(tIndex < tutorialSteps.length-1) tIndex++; else el('tutorial-modal') && el('tutorial-modal').classList.add('hidden'); renderTutorial();});
+el('t-prev') && el('t-prev').addEventListener('click', ()=> { if(tIndex>0) tIndex--; renderTutorial();});
+el('t-skip') && el('t-skip').addEventListener('click', ()=> { el('tutorial-modal') && el('tutorial-modal').classList.add('hidden'); toast('Tutorial dilewati');});
+
+/* =========================
+   Init UI wiring
+   ========================= */
+(function initUI(){
+  el('pm-close') && el('pm-close').addEventListener('click', ()=> el('payment-modal').classList.add('hidden'));
+  el('payment-modal') && el('payment-modal').classList.add('hidden');
+  el('main-header') && el('main-header').classList.add('hidden');
+  el('sidebar') && el('sidebar').classList.add('hidden');
+  el('main-content') && el('main-content').classList.add('hidden');
+})();
+
+/* =========================
+   Misc helpers
+   ========================= */
+function seedLargeDemoUsers(count=10){
+  app = getAppData();
+  for(let i=0;i<count;i++){
+    const u = 'user'+(i+1);
+    if(app.users[u]) continue;
+    const salt = Math.random().toString(36).slice(2);
+    hashPassword('pwd'+(i+1), salt).then(h=>{
+      app.users[u] = {hash:h, salt, created:Date.now(), stats:{logins:[], topups:0, games:0, downloads:0}, profile:{display:u}};
+      saveAppData(app);
+    });
+  }
+}
+
+function showDebugInfo(){ console.log('APP', getAppData()); alert('Buka console untuk melihat data.'); }
+
+</script>
+</body>
+</html>
